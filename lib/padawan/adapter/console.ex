@@ -1,5 +1,5 @@
-defmodule Padawan.Console do
-  use Padawan.AdapterHelpers
+defmodule Padawan.Adapter.Console do
+  use Padawan.Adapter
 
   @moduledoc """
   Console adapter

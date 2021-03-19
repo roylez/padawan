@@ -1,4 +1,4 @@
-defmodule Padawan.AdapterHelpers do
+defmodule Padawan.Adapter do
   defmacro __using__(_) do
     quote do
       alias Padawan.{ Lua, Cache }

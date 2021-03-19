@@ -145,8 +145,8 @@ defmodule Padawan.Channel do
     end
   end
 
-  defp adapter("console"), do: Padawan.Console
-  defp adapter(_),         do: Padawan.Mattermost
+  defp adapter("console"), do: Padawan.Adapter.Console
+  defp adapter(_),         do: Padawan.Adapter.Mattermost
   defp bot_name(_), do: "bot"
 # }}}
 end
