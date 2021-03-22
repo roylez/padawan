@@ -24,6 +24,7 @@ defmodule Padawan.MixProject do
   defp deps do
     [
       {:cachex, "~> 3.3"},
+      {:hackney, "~> 1.17"},
       {:luerl, git: "https://github.com/rvirding/luerl", branch: "develop"},
     ]
   end

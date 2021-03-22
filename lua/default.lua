@@ -17,6 +17,8 @@
 --
 --    whenever a message matches a pattern defined, a predefined action will be triggered
 --
+--      add_message_handler(REGEX, HANDLER_FUNC)
+--
 add_message_handler("how are you", "greet")
 add_message_handler("case\\s+(\\d)+", "handle_cases")
 add_message_handler("\\w+\\+\\+", "karma_incr")
@@ -26,6 +28,14 @@ add_message_handler("\\w+\\-\\-", "karma_decr")
 --
 --    When a bot is directly addressed, an action handler will be triggered. Regex matching will
 --    start from the beginning of the sentence after removing bot name prefix.
+--
+--      add_action_handler(REGEX, HANDLER_FUNC, SYNOPSIS, DESCRIPTION)
+--
+--    The following action handlers are added by default:
+--
+--      help - display available commands
+--      load [URL] - load a new lua channel script from a url
+--      reload - reload local channel script
 --
 add_action_handler("who are you", "self",       "who are you", "Some greetings")
 add_action_handler("ack",         "handle_ack", "ack [CASE]",  "Acknowledge a case")

@@ -1,20 +1,12 @@
 defmodule Padawan.Adapter do
   defmacro __using__(_) do
     quote do
-      alias Padawan.{ Lua, Cache }
+      alias Padawan.{ Lua, Cache, Channel }
 
       def gmatch([str, pat], lua) do
         { :ok, re } = Regex.compile(pat, "i")
         res = Regex.scan(re, str, capture: :all_but_first)
         { [ res ], lua }
-      end
-
-      def handle_help(_, lua) do
-        { actions, _ } = Lua.get(lua, :actions)
-        msg = actions
-              |> Stream.map(fn {_, h} -> h end)
-              |> Enum.join("\n")
-        say([ msg ], lua)
       end
 
       def set([str, value], lua) do
@@ -48,7 +40,7 @@ defmodule Padawan.Adapter do
       def add_message_handler([pat, func], lua) do
         { :ok, re } = Regex.compile(pat, "i")
         { channel, _ } = Lua.get(lua, :channel)
-        Padawan.Channel.add_handler(
+        Channel.add_handler(
           channel,
           :message_handler,
           %{ pattern: re, func: String.to_atom(func) } 
@@ -60,7 +52,7 @@ defmodule Padawan.Adapter do
       def add_action_handler(["^" <> _=pat, func, synopsis, desc], lua) do
         { :ok, re } = Regex.compile(pat, "i")
         { channel, _ } = Lua.get(lua, :channel)
-        Padawan.Channel.add_handler(
+        Channel.add_handler(
           channel, 
           :action_handler,
           %{ pattern: re, func: String.to_atom(func), desc: desc, synopsis: synopsis }
@@ -71,6 +63,35 @@ defmodule Padawan.Adapter do
         add_action_handler(["^"<>pat, func, synopsis, desc], lua)
       end
 
+      def handle_help(_, lua) do
+        { actions, _ } = Lua.get(lua, :actions)
+        msg = actions
+              |> Stream.map(fn {_, h} -> h end)
+              |> Enum.join("\n")
+        say([ msg ], lua)
+      end
+
+      def handle_load([ msg ], lua) do
+        { channel, _ } = Lua.get(lua, :channel)
+        with [[ url ]] when is_binary(url) <- Regex.scan(~r/^load\s+(https?:\/\/(?:www\.)?(?:[0-9A-Za-z-\.@:%_\+~#=]+)+(?:(?:\.[a-zA-Z]{2,3})+)(?:\/.*)?(?:\?.*)?)/i, msg, capture: :all_but_first),
+             { :ok, _, header, ref } <- :hackney.get(url),
+             %{ "Content-Type" => "text/plain" <> _ } <- Enum.into(header, %{}),
+             { :ok, body } <- :hackney.body(ref)
+        do
+          Channel.send_message(channel, {:save_script, body})
+          say( ["Script saved as #{channel}.lua" ], lua )
+        else
+          _ ->
+            say( ["Invalid url supplied. URL must point to a text/plain lua file."], lua )
+        end
+      end
+
+      def handle_reload(_, lua) do
+        { channel, _ } = Lua.get(lua, :channel)
+        script = Channel.script(channel)
+        Channel.send_message(channel, :reload_script)
+        say([ "#{script} loaded" ], lua)
+      end
     end
   end
 end

@@ -13,6 +13,18 @@ defmodule Padawan.Channel do
       func: :handle_help,
       pattern: ~r/^help/i,
       synopsis: "help"
+    },
+    %Handler{
+      desc: "Reload channel script",
+      func: :handle_reload,
+      pattern: ~r/^reload/i,
+      synopsis: "reload"
+    },
+    %Handler{
+      desc: "Load channel script from a url",
+      func: :handle_load,
+      pattern: ~r/^load\s+https?:\/\/.*+/,
+      synopsis: "load <URL>"
     }
   ]
 
@@ -41,7 +53,6 @@ defmodule Padawan.Channel do
     { :ok,
       %__MODULE__{
         channel: channel,
-        script: script(channel),
         lua_root: root,
         adapter: adapter(channel),
         bot_name: bot_name(channel)
@@ -64,17 +75,43 @@ defmodule Padawan.Channel do
   end
 
   def handle_continue({:reload_script, from}, state) do
-    { res, lua } = Lua.load(state.lua_root, state.script)
-    if from do
-      GenServer.reply(from, res)
+    try do
+      { res, lua } = Lua.load(state.lua_root, script(state.channel))
+      if from do
+        GenServer.reply(from, res)
+      end
+      { :noreply, %{ state | lua: lua } }
+    rescue
+      _ ->
+        { res, lua } = Lua.load(state.lua_root, fallback_script())
+        if from do
+          GenServer.reply(from, res)
+        end
+        { :noreply, %{ state | lua: lua } }
     end
-    { :noreply, %{ state | lua: lua } }
   end
 
   def handle_continue(:set_lua_actions, %{ action_handlers: actions } = state) do
     lua_actions = Enum.map(actions, &("#{&1.synopsis} - #{&1.desc}"))
     lua = Lua.set(state.lua, :actions, lua_actions)
     { :noreply, %{ state | lua: lua } }
+  end
+
+  def handle_cast({:save_script, body}, state) do
+    { :ok, file } = File.open("#{@script_dir}/#{state.channel}.lua", [:write])
+    IO.write(file, body)
+    File.close(file)
+    { :noreply,
+      %{ state | message_handlers: [], action_handlers: @default_actions },
+      { :continue, { :reload_script, nil } }
+    }
+  end
+
+  def handle_cast(:reload_script, state) do
+    { :noreply,
+      %{ state | message_handlers: [], action_handlers: @default_actions },
+      { :continue, { :reload_script, nil } }
+    }
   end
 
   def handle_cast({:message_handler, handler}, state) do
@@ -122,6 +159,8 @@ defmodule Padawan.Channel do
   def registered_name(channel), do: :"#{__MODULE__}.#{String.upcase(channel)}"
   def process(channel), do: registered_name(channel)
 
+  def script(channel), do: "#{@script_dir}/#{channel}.lua"
+  def fallback_script, do: "#{@script_dir}/default.lua"
   # }}}
   
 # Private functions {{{
@@ -149,12 +188,5 @@ defmodule Padawan.Channel do
   defp adapter(_),         do: Padawan.Adapter.Mattermost
   defp bot_name(_), do: "bot"
 
-  defp script(channel) do
-    if File.exists?("#{@script_dir}/#{channel}.lua") do
-      "#{@script_dir}/#{channel}.lua"
-    else
-      "#{@script_dir}/default.lua"
-    end
-  end
 # }}}
 end
