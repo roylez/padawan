@@ -27,9 +27,21 @@ defmodule Padawan.Adapter do
         { [ Cache.put!({channel, str}, value, ttl: :timer.seconds(ttl)) ], lua }
       end
 
+      def set_global([str, value], lua) do
+        { [ Cache.put!({__MODULE__, str}, value) ], lua }
+      end
+
+      def set_global([str, value, ttl], lua) do
+        { [ Cache.put!({__MODULE__, str}, value, ttl: :timer.seconds(ttl)) ], lua }
+      end
+
       def get([str], lua) do
         { channel, _ } = Lua.get(lua, :channel)
         { [ Cache.get!({channel, str}) ], lua }
+      end
+
+      def get_global([str], lua) do
+        { [ Cache.get!({__MODULE__, str}) ], lua }
       end
 
       # Write handler mapping to Elixir Channel state

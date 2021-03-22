@@ -8,7 +8,10 @@
 --    say(str): print string to chat
 --    set(str, value): set a persistent variable
 --    set(str, value, ttl): set a variable with an expiration in seconds
+--    set_global(str, value): set a persistent variable across all channels
+--    set_global(str, value, ttl): set a variable with an expiration in seconds across all channels
 --    get(str): get a variable
+--    get_global(str): get a global variable available in all channels
 
 -- Message handlers
 --
@@ -34,7 +37,7 @@ end
 
 function karma_incr(msg)
   local matches = gmatch(msg, "(\\w+)\\+\\+")
-  local karma = get("karma") or {}
+  local karma = get_global("karma") or {}
   for _,v in ipairs(matches) do
     k = karma[v[1]]
     if k then 
@@ -44,12 +47,12 @@ function karma_incr(msg)
     end
     say(v[1] .. " has " .. karma[v[1]] .. " points of karma.")
   end
-  set("karma", karma)
+  set_global("karma", karma)
 end
 
 function karma_decr(msg)
   local matches = gmatch(msg, "(\\w+)\\-\\-")
-  local karma = get("karma") or {}
+  local karma = get_global("karma") or {}
   for _,v in ipairs(matches) do
     k = karma[v[1]]
     if k then 
@@ -59,11 +62,11 @@ function karma_decr(msg)
     end
     say(v[1] .. " has " .. karma[v[1]] .. " points of karma.")
   end
-  set("karma", karma)
+  set_global("karma", karma)
 end
 
 function karma_top(msg)
-  local karma = get("karma") or {}
+  local karma = get_global("karma") or {}
   local keys = {}
   for k in pairs(karma) do
     table.insert(keys, k)
@@ -84,10 +87,20 @@ function handle_cases(msg)
   local matches = gmatch(msg, "[Cc]ase\\s+(\\d+)")
   for i,v in ipairs(matches) do
     print_case(v[1])
+    set("last_mentioned_case", v[1], 120)
   end
 end
 
 function handle_ack(msg)
   local case = string.match(msg, "%d+")
-  if case then say("Case " .. case .. " acked") else say("Most recent case acked") end
+  if case then
+    say("Case " .. case .. " acked")
+  else
+    local case = get("last_mentioned_case")
+    if case then
+      say("Case " .. case .. " acked")
+    else
+      say("Which case to ack?")
+    end
+  end
 end
