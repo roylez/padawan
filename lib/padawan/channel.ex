@@ -6,7 +6,7 @@ defmodule Padawan.Channel do
   alias Padawan.Lua
   alias Padawan.Channel.Handler
 
-  @script 'lua/hello.lua'
+  @script_dir "lua"
   @default_actions [
     %Handler{
       desc: "Display this help",
@@ -41,7 +41,7 @@ defmodule Padawan.Channel do
     { :ok,
       %__MODULE__{
         channel: channel,
-        script: @script,
+        script: script(channel),
         lua_root: root,
         adapter: adapter(channel),
         bot_name: bot_name(channel)
@@ -148,5 +148,13 @@ defmodule Padawan.Channel do
   defp adapter("console"), do: Padawan.Adapter.Console
   defp adapter(_),         do: Padawan.Adapter.Mattermost
   defp bot_name(_), do: "bot"
+
+  defp script(channel) do
+    if File.exists?("#{@script_dir}/#{channel}.lua") do
+      "#{@script_dir}/#{channel}.lua"
+    else
+      "#{@script_dir}/default.lua"
+    end
+  end
 # }}}
 end
