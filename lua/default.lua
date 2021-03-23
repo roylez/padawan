@@ -36,6 +36,7 @@ add_message_handler("\\w+\\-\\-", "karma_decr")
 --      help - display available commands
 --      load [URL] - load a new lua channel script from a url
 --      reload - reload local channel script
+--      hook [<REGEX> <URL>|reset] - display/set webhook
 --
 add_action_handler("who are you", "self",       "who are you", "Some greetings")
 add_action_handler("ack",         "handle_ack", "ack [CASE]",  "Acknowledge a case")

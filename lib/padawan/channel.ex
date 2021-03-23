@@ -23,8 +23,14 @@ defmodule Padawan.Channel do
     %Handler{
       desc: "Load channel script from a url",
       func: :handle_load,
-      pattern: ~r/^load\s+https?:\/\/.*+/,
+      pattern: ~r/^load\s+https?:\/\/.*/,
       synopsis: "load <URL>"
+    },
+    %Handler{
+      desc: "Display or setup webhook",
+      func: :handle_hook,
+      pattern: ~r/^hook(\s+.*)?/,
+      synopsis: "hook [<REGEX> <URL>|reset]"
     }
   ]
 

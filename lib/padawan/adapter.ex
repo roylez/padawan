@@ -71,6 +71,29 @@ defmodule Padawan.Adapter do
         say([ msg ], lua)
       end
 
+      def handle_hook([ "hook" ], lua) do
+        case get([ "hook" ], lua) do
+          { [ nil ], _ } ->
+            say( [ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
+          { [ [ pattern, url ] ], _ } ->
+            say([ "/#{pattern}/i -> #{url}" ], lua)
+        end
+      end
+      def handle_hook([ "hook reset" ], lua) do
+        set(["hook", nil], lua)
+        say([ "Webhook deleted." ], lua)
+      end
+      def handle_hook([ "hook" <> hook_details ], lua) do
+        with [[ pattern, url ]] <- Regex.scan(~r/([^ ]+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook_details, capture: :all_but_first)
+        do
+          say([ "/#{pattern}/i -> #{url}" ], lua)
+          set([ "hook", [pattern, url] ], lua)
+        else
+          _ ->
+          say([ "Invalid command" ], lua)
+        end
+      end
+
       def handle_load([ msg ], lua) do
         { channel, _ } = Lua.get(lua, :channel)
         with [[ url ]] when is_binary(url) <- Regex.scan(~r/^load\s+(https?:\/\/(?:www\.)?(?:[0-9A-Za-z-\.@:%_\+~#=]+)+(?:(?:\.[a-zA-Z]{2,3})+)(?:\/.*)?(?:\?.*)?)/i, msg, capture: :all_but_first),
