@@ -62,7 +62,8 @@ defmodule Padawan.Channel do
         channel: channel,
         name: name,
         lua_root: root,
-        adapter: adapter(name),
+        lua: root,
+        adapter: ad,
         bot_name: bot_name(name)
       },
       { :continue, { :reload_script, nil } }
@@ -100,7 +101,7 @@ defmodule Padawan.Channel do
   end
 
   def handle_continue(:set_lua_actions, %{ action_handlers: actions } = state) do
-    lua_actions = Enum.map(actions, &("#{&1.synopsis} - #{&1.desc}"))
+    lua_actions = Enum.map(actions, &(Map.take(&1, [:desc, :synopsis])))
     lua = Lua.set(state.lua, :actions, lua_actions)
     { :noreply, %{ state | lua: lua } }
   end
@@ -181,7 +182,9 @@ defmodule Padawan.Channel do
   defp init_lua(adapter) do
     lua = Lua.init()
     adapter.__info__(:functions)
-    |> Enum.reduce(lua, fn { f, _}, acc -> Lua.set(acc, f, &(apply(adapter, f, [&1, &2]))) end)
+    |> Enum.reduce(lua, fn { f, _}, acc ->
+      Lua.set(acc, f, &(apply(adapter, f, [&1, &2])))
+    end)
   end
 
   defp call_lua_function(lua, func, args) do
