@@ -66,7 +66,7 @@ defmodule Padawan.Adapter do
 
       def handle_help(_, lua) do
         { actions, _ } = Lua.get(lua, :actions)
-        say([ Enum.join(actions) ], lua)
+        say([ Enum.join(actions, "\n") ], lua)
       end
 
       def handle_hook([ "hook" ], lua) do
@@ -81,14 +81,15 @@ defmodule Padawan.Adapter do
         set(["hook", nil], lua)
         say([ "Webhook deleted." ], lua)
       end
-      def handle_hook([ "hook" <> hook_details ], lua) do
-        with [[ pattern, url ]] <- Regex.scan(~r/([^ ]+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook_details, capture: :all_but_first)
+      def handle_hook([ hook ], lua) do
+        with [[ pattern, url ]] <- Regex.scan(~r/hook\s+(.+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook, capture: :all_but_first),
+             [ _, pattern, url ] <- OptionParser.split(hook)
         do
           say([ "/#{pattern}/i -> #{url}" ], lua)
           set([ "hook", [pattern, url] ], lua)
         else
-          _ ->
-          say([ "Invalid command" ], lua)
+          e ->
+            say([ "Invalid command" ], lua)
         end
       end
 

@@ -55,6 +55,7 @@ defmodule Padawan.MattermostWebsocket do
         id: event.data.post.channel_id,
         type: event.data.channel_type,
         })
+      :timer.sleep(1000)
     end
     Padawan.Channel.send_message(chan, event.data)
     { :ok, seq }
