@@ -19,7 +19,16 @@ defmodule Padawan.Lua do
     get(lua, [key])
   end
   def get(lua, key) do
-    Luerl.get_table(lua, key)
+    case { res, lua } = Luerl.get_table(lua, key) do
+      { [ {1, _ } |_ ], _ } ->
+        { Enum.map(res, fn {_, v} -> v end), lua }
+      { [ {_, _ } |_ ], _ } ->
+        res = Enum.map(res, fn {k, v} -> { String.to_atom(k), v } end)
+              |> Enum.into(%{})
+        { res, lua }
+      _ ->
+        { res, lua }
+    end
   end
 
   def set(lua, key, value) when is_atom(key) do

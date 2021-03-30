@@ -11,12 +11,12 @@ defmodule Padawan.Adapter do
 
       def set([str, value], lua) do
         { channel, _ } = Lua.get(lua, :channel)
-        { [ Cache.put!({channel, str}, value) ], lua }
+        { [ Cache.put!({channel.name, str}, value) ], lua }
       end
 
       def set([str, value, ttl], lua) do
         { channel, _ } = Lua.get(lua, :channel)
-        { [ Cache.put!({channel, str}, value, ttl: :timer.seconds(ttl)) ], lua }
+        { [ Cache.put!({channel.name, str}, value, ttl: :timer.seconds(ttl)) ], lua }
       end
 
       def set_global([str, value], lua) do
@@ -29,7 +29,7 @@ defmodule Padawan.Adapter do
 
       def get([str], lua) do
         { channel, _ } = Lua.get(lua, :channel)
-        { [ Cache.get!({channel, str}) ], lua }
+        { [ Cache.get!({channel.name, str}) ], lua }
       end
 
       def get_global([str], lua) do
@@ -41,7 +41,7 @@ defmodule Padawan.Adapter do
         { :ok, re } = Regex.compile(pat, "i")
         { channel, _ } = Lua.get(lua, :channel)
         Channel.add_handler(
-          channel,
+          channel.name,
           :message_handler,
           %{ pattern: re, func: String.to_atom(func) } 
         )
@@ -52,8 +52,9 @@ defmodule Padawan.Adapter do
       def add_action_handler(["^" <> _=pat, func, synopsis, desc], lua) do
         { :ok, re } = Regex.compile(pat, "i")
         { channel, _ } = Lua.get(lua, :channel)
+        chan = Enum.into(channel, %{})
         Channel.add_handler(
-          channel, 
+          channel.name,
           :action_handler,
           %{ pattern: re, func: String.to_atom(func), desc: desc, synopsis: synopsis }
         )
@@ -65,10 +66,7 @@ defmodule Padawan.Adapter do
 
       def handle_help(_, lua) do
         { actions, _ } = Lua.get(lua, :actions)
-        msg = actions
-              |> Stream.map(fn {_, h} -> h end)
-              |> Enum.join("\n")
-        say([ msg ], lua)
+        say([ Enum.join(actions) ], lua)
       end
 
       def handle_hook([ "hook" ], lua) do

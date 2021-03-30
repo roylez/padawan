@@ -37,6 +37,7 @@ defmodule Padawan.Channel do
   defstruct [
     adapter: nil,
     channel: nil,
+    name: nil,
     script: nil,
     lua: nil,
     lua_root: nil,
@@ -47,21 +48,22 @@ defmodule Padawan.Channel do
 
 # OTP stuff {{{
   def start_link(channel) do
-    GenServer.start_link(__MODULE__, channel, name: registered_name(channel), id: channel)
+    GenServer.start_link(__MODULE__, channel, name: registered_name(channel.name), id: channel.name)
   end
 
-  def init(channel) do
-    Logger.metadata(channel: channel)
-    Logger.notice "joining channel #{channel}"
-    ad = adapter(channel)
+  def init(%{ name: name }=channel) do
+    Logger.metadata(channel: name)
+    Logger.notice "joining channel #{name}"
+    ad = adapter(name)
     root = init_lua(ad)
            |> Lua.set(:channel, channel)
     { :ok,
       %__MODULE__{
         channel: channel,
+        name: name,
         lua_root: root,
-        adapter: adapter(channel),
-        bot_name: bot_name(channel)
+        adapter: adapter(name),
+        bot_name: bot_name(name)
       },
       { :continue, { :reload_script, nil } }
     }
@@ -82,7 +84,7 @@ defmodule Padawan.Channel do
 
   def handle_continue({:reload_script, from}, state) do
     try do
-      { res, lua } = Lua.load(state.lua_root, script(state.channel))
+      { res, lua } = Lua.load(state.lua_root, script(state.name))
       if from do
         GenServer.reply(from, res)
       end
@@ -104,7 +106,7 @@ defmodule Padawan.Channel do
   end
 
   def handle_cast({:save_script, body}, state) do
-    { :ok, file } = File.open("#{@script_dir}/#{state.channel}.lua", [:write])
+    { :ok, file } = File.open("#{@script_dir}/#{state.name}.lua", [:write])
     IO.write(file, body)
     File.close(file)
     { :noreply,
@@ -131,15 +133,21 @@ defmodule Padawan.Channel do
     }
   end
 
-  def handle_cast(message, state) when is_binary(message) do
-    { msg, handlers } = if String.starts_with?(message, state.bot_name) do
-      { Regex.replace(~r/^#{state.bot_name}:?\s+/, message, ""), state.action_handlers }
-    else
-      { message, state.message_handlers }
+  def handle_cast(message, state) do
+    case categorize_message(message, state.bot_name) do
+      { :message, msg } ->
+        Logger.debug inspect(message, pretty: true)
+        state.message_handlers
+        |> Stream.filter(&Regex.match?(&1.pattern, msg))
+        |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
+      { :action, msg } ->
+        Logger.debug inspect(message, pretty: true)
+        state.action_handlers
+        |> Stream.filter(&Regex.match?(&1.pattern, msg))
+        |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
+      _ ->
+        nil
     end
-    handlers
-    |> Stream.filter(&Regex.match?(&1.pattern, msg))
-    |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
     { :noreply, state }
   end
 # }}}
@@ -181,6 +189,7 @@ defmodule Padawan.Channel do
       Lua.call(lua, func, args)
     rescue
       e in ErlangError ->
+        Logger.debug "Error calling Lua: #{inspect {func, args}}"
         case e do
           %ErlangError{original: {:lua_error, err, _ }} ->
             Logger.warn "Lua Error: #{inspect(err)}"
@@ -190,9 +199,29 @@ defmodule Padawan.Channel do
     end
   end
 
-  defp adapter("console"), do: Padawan.Adapter.Console
-  defp adapter(_),         do: Padawan.Adapter.Mattermost
-  defp bot_name(_), do: "bot"
+  defp adapter("console"),  do: Padawan.Adapter.Console
+  defp adapter(_),          do: Padawan.Adapter.Mattermost
+  defp bot_name("console"), do: "bot"
+  defp bot_name(_),         do: Padawan.Mattermost.name()
+
+  defp categorize_message(message, bot_name) when is_binary(message) do
+    if Regex.match?(~r/^@?#{bot_name}:?\s+/i, message) do
+      { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, message, "") }
+    else
+      { :message, message }
+    end
+  end
+  defp categorize_message(%{ sender_name: "@"<>bot_name }, bot_name), do: nil
+  defp categorize_message(%{ channel_type: "D" }=event, _) do
+    { :action, event.post.message }
+  end
+  defp categorize_message(%{ post: %{ message: message } }, bot_name) do
+    if Regex.match?(~r/^@?#{bot_name}:?\s+/i, message) do
+      { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, message, "") }
+    else
+      { :message, message }
+    end
+  end
 
 # }}}
 end

@@ -9,7 +9,9 @@ defmodule Padawan.Application do
   def start(_type, _args) do
     children = [
       { Cachex, name: :padawan },
-      Padawan.ChannelSup
+      Padawan.ChannelSup,
+      Padawan.MattermostWebsocket,
+      Padawan.Mattermost,
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -17,7 +19,7 @@ defmodule Padawan.Application do
     opts = [strategy: :one_for_one, name: Padawan]
     res = Supervisor.start_link(children, opts)
 
-    Padawan.start_channel("console")
+    Padawan.start_channel(%{ name: "console" })
 
     res
   end
