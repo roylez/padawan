@@ -52,7 +52,6 @@ defmodule Padawan.Adapter do
       def add_action_handler(["^" <> _=pat, func, synopsis, desc], lua) do
         { :ok, re } = Regex.compile(pat, "i")
         channel = Lua.get(lua, :channel)
-        chan = Enum.into(channel, %{})
         Channel.add_handler(
           channel.name,
           :action_handler,
