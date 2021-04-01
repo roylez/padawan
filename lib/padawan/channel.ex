@@ -189,7 +189,7 @@ defmodule Padawan.Channel do
 
   defp call_lua_function(lua, func, args) do
     try do
-      Logger.debug "[Lua]: #{inspect {func, args}}"
+      Logger.debug "[Lua] #{inspect {func, args}}"
       Lua.call(lua, func, args)
     rescue
       e in ErlangError ->

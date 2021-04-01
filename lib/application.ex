@@ -19,7 +19,7 @@ defmodule Padawan.Application do
     opts = [strategy: :one_for_one, name: Padawan]
     res = Supervisor.start_link(children, opts)
 
-    Padawan.start_channel(%{ name: "console" })
+    Padawan.start_channel(%{ name: "console", private: true })
 
     res
   end

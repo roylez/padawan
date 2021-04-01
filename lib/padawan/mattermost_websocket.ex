@@ -50,11 +50,10 @@ defmodule Padawan.MattermostWebsocket do
   def handle_event(%{ event: "posted", seq: seq }=event, _state) do
     chan = event.data.channel_display_name |> Padawan.Channel.registered_name
     with nil <- Process.whereis(chan) do
-      Padawan.start_channel( %{
-        name: event.data.channel_display_name,
-        id: event.data.post.channel_id,
-        type: event.data.channel_type,
-        })
+        Padawan.start_channel( %{
+          name: event.data.channel_display_name,
+          id: event.data.post.channel_id,
+          private: event.data.channel_type == "D" })
       :timer.sleep(1000)
     end
     Padawan.Channel.send_message(chan, event.data)
@@ -62,7 +61,7 @@ defmodule Padawan.MattermostWebsocket do
   end
 
   def handle_event(%{ event: e, seq: seq }, _state)
-  when e in ~w(emoji_added user_updated)
+  when e in ~w(emoji_added user_updated license_changed)
   do
     { :ok, seq }
   end

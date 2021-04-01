@@ -9,31 +9,31 @@ defmodule Padawan.Adapter do
         { [ res ], lua }
       end
 
-      def set([str, value], lua) do
+      def set([key, value], lua) do
         channel = Lua.get(lua, :channel)
-        { [ Cache.put!({channel.name, str}, value) ], lua }
+        { [ Cache.put!({channel.name, key}, value) ], lua }
       end
 
-      def set([str, value, ttl], lua) do
+      def set([key, value, ttl], lua) do
         channel = Lua.get(lua, :channel)
-        { [ Cache.put!({channel.name, str}, value, ttl: :timer.seconds(ttl)) ], lua }
+        { [ Cache.put!({channel.name, key}, value, ttl: :timer.seconds(ttl)) ], lua }
       end
 
-      def set_global([str, value], lua) do
-        { [ Cache.put!({__MODULE__, str}, value) ], lua }
+      def set_global([key, value], lua) do
+        { [ Cache.put!({__MODULE__, key}, value) ], lua }
       end
 
-      def set_global([str, value, ttl], lua) do
-        { [ Cache.put!({__MODULE__, str}, value, ttl: :timer.seconds(ttl)) ], lua }
+      def set_global([key, value, ttl], lua) do
+        { [ Cache.put!({__MODULE__, key}, value, ttl: :timer.seconds(ttl)) ], lua }
       end
 
-      def get([str], lua) do
+      def get([key], lua) do
         channel = Lua.get(lua, :channel)
-        { [ Cache.get!({channel.name, str}) ], lua }
+        { [ Cache.get!({channel.name, key}) ], lua }
       end
 
-      def get_global([str], lua) do
-        { [ Cache.get!({__MODULE__, str}) ], lua }
+      def get_global([key], lua) do
+        { [ Cache.get!({__MODULE__, key}) ], lua }
       end
 
       # Write handler mapping to Elixir Channel state
@@ -71,26 +71,50 @@ defmodule Padawan.Adapter do
         say([ msg ], lua)
       end
 
-      def handle_hook([ "hook" ], lua) do
-        case get([ "hook" ], lua) do
-          { [ nil ], _ } ->
-            say( [ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
-          { [ [ pattern, url ] ], _ } ->
-            say([ "/#{pattern}/i -> #{url}" ], lua)
+      def handle_hook([ "hook" <> rest ], lua) do
+        case Lua.get(lua, :channel) do
+          %{ private: true } -> handle_hook([String.trim(rest)], lua )
+          _ -> say(["Ask me this in a private chat"], lua)
         end
       end
-      def handle_hook([ "hook reset" ], lua) do
-        set(["hook", nil], lua)
-        say([ "Webhook deleted." ], lua)
-      end
-      def handle_hook([ hook ], lua) do
-        with [[ pattern, url ]] <- Regex.scan(~r/hook\s+(.+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook, capture: :all_but_first),
-             [ _, pattern, url ] <- OptionParser.split(hook)
-        do
-          say([ "/#{pattern}/i -> #{url}" ], lua)
-          set([ "hook", [pattern, url] ], lua)
+      def handle_hook([""], lua) do
+        channel = Lua.get(lua, :channel)
+        name = channel.name
+        {h, _} = get_global(["hook"], lua)
+        with { [ %{ ^name => [ pattern, url ] } ], _ } <- get_global(["hook"], lua) do
+           say([ "/#{pattern}/i -> #{url}" ], lua)
         else
-          e ->
+          _ -> say([ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
+        end
+      end
+      def handle_hook(["reset"], lua) do
+        channel = Lua.get(lua, :channel)
+        name = channel.name
+        with { [ %{ ^name => _ }=hooks ], _ } <- get_global(["hook"], lua) do
+            set_global(["hook", Map.delete(hooks, name)], lua)
+            say([ "Webhook deleted." ], lua)
+        else
+          _ -> say([ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
+        end
+      end
+      def handle_hook([hook], lua) do
+        with [[ pattern, url ]] <- Regex.scan(~r/(.+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook, capture: :all_but_first),
+             [ pattern, url ] <- OptionParser.split(hook),
+             { :ok, status, _, _ } when status in 200..209 <- :hackney.post(url)
+        do
+          channel = Lua.get(lua, :channel)
+          hook = %{ channel.name => [ pattern, url ] }
+          case get_global(["hook"], lua) do
+            { [ nil ], _ } ->
+              set_global(["hook", hook ], lua)
+            { [ %{}=hooks ], _ } ->
+              set_global(["hook", Map.merge(hooks, hook)], lua)
+          end
+          say([ "Webhook saved: /#{pattern}/i -> #{url}" ], lua)
+        else
+          {_, status, _, _ } ->
+            say(["Server returns status #{status}, please check your URL and try again"], lua)
+          _ ->
             say([ "Invalid command" ], lua)
         end
       end
