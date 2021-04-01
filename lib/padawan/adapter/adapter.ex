@@ -80,9 +80,8 @@ defmodule Padawan.Adapter do
       def handle_hook([""], lua) do
         channel = Lua.get(lua, :channel)
         name = channel.name
-        {h, _} = get_global(["hook"], lua)
         with { [ %{ ^name => [ pattern, url ] } ], _ } <- get_global(["hook"], lua) do
-           say([ "/#{pattern}/i -> #{url}" ], lua)
+           say([ "#{inspect pattern} -> #{url}" ], lua)
         else
           _ -> say([ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
         end
@@ -98,22 +97,25 @@ defmodule Padawan.Adapter do
         end
       end
       def handle_hook([hook], lua) do
-        with [[ pattern, url ]] <- Regex.scan(~r/(.+)\s+(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b(?:[-a-zA-Z0-9@:%_\+.~#?&\/\/=]*))/i, hook, capture: :all_but_first),
+        with [[ pattern, url ]] <- Regex.scan(~r/(.+)\s+(https?:\/\/(?:www\.)?(?:[0-9A-Za-z-\.@:%_\+~#=]+)+(?:(?:\.[a-zA-Z]{2,3})+)(?:\/.*)?(?:\?.*)?)/i, hook, capture: :all_but_first),
              [ pattern, url ] <- OptionParser.split(hook),
+             { :ok, pattern } <- Regex.compile(pattern),
              { :ok, status, _, _ } when status in 200..209 <- :hackney.post(url)
         do
           channel = Lua.get(lua, :channel)
           hook = %{ channel.name => [ pattern, url ] }
           case get_global(["hook"], lua) do
-            { [ nil ], _ } ->
-              set_global(["hook", hook ], lua)
-            { [ %{}=hooks ], _ } ->
-              set_global(["hook", Map.merge(hooks, hook)], lua)
+            { [ nil ], _ } ->       set_global(["hook", hook ], lua)
+            { [ %{}=hooks ], _ } -> set_global(["hook", Map.merge(hooks, hook)], lua)
           end
-          say([ "Webhook saved: /#{pattern}/i -> #{url}" ], lua)
+          say([ "Webhook saved: #{inspect pattern} -> #{url}" ], lua)
         else
           {_, status, _, _ } ->
             say(["Server returns status #{status}, please check your URL and try again"], lua)
+          {:error, _ } ->
+            say(["Something is wrong. Probably your regex pattern."], lua)
+          [] ->
+            say(["Invalid URL"], lua)
           _ ->
             say([ "Invalid command" ], lua)
         end

@@ -1,11 +1,7 @@
 require Logger
 
-defmodule Padawan.MattermostWebsocket do
+defmodule Padawan.Mattermost.Websocket do
   use WebSockex
-
-  defmodule Event do
-    defstruct seq: 0, event: nil, data: nil, broadcast: nil
-  end
 
   def start_link(_) do
     endpoint = Application.get_env(:padawan, :mattermost)[:api_url]
@@ -84,7 +80,8 @@ defmodule Padawan.MattermostWebsocket do
     e =event
        |> update_in(~w(data mentions)a, &( if &1 do Jason.decode!(&1, keys: :atoms) else nil end))
        |> update_in(~w(data post)a, &( if &1 do Jason.decode!(&1, keys: :atoms) else nil end))
-    struct(Event, e)
+       |> update_in(~w(data)a, &(struct(Padawan.Mattermost.EventData, &1)))
+    struct(Padawan.Mattermost.Event, e)
   end
 
 end

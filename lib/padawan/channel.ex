@@ -138,6 +138,7 @@ defmodule Padawan.Channel do
     case categorize_message(message, state.bot_name) do
       { :message, msg } ->
         Logger.debug inspect(message, pretty: true)
+        send_webhooks(state.adapter, message)
         state.message_handlers
         |> Stream.filter(&Regex.match?(&1.pattern, msg))
         |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
@@ -204,26 +205,35 @@ defmodule Padawan.Channel do
 
   defp adapter("console"),  do: Padawan.Adapter.Console
   defp adapter(_),          do: Padawan.Adapter.Mattermost
+
   defp bot_name("console"), do: "bot"
   defp bot_name(_),         do: Padawan.Mattermost.name()
 
-  defp categorize_message(message, bot_name) when is_binary(message) do
-    if Regex.match?(~r/^@?#{bot_name}:?\s+/i, message) do
-      { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, message, "") }
-    else
-      { :message, message }
-    end
-  end
+  def message_content(str) when is_binary(str), do: str
+  def message_content(%Padawan.Mattermost.EventData{}=message), do: get_in(message, [:post, :message])
+
   defp categorize_message(%{ sender_name: "@"<>bot_name }, bot_name), do: nil
   defp categorize_message(%{ channel_type: "D" }=event, _) do
-    { :action, event.post.message }
+    { :action, message_content(event) }
   end
-  defp categorize_message(%{ post: %{ message: message } }, bot_name) do
-    if Regex.match?(~r/^@?#{bot_name}:?\s+/i, message) do
-      { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, message, "") }
+  defp categorize_message(message, bot_name) do
+    content = message_content(message)
+    if Regex.match?(~r/^@?#{bot_name}:?\s+/i, content) do
+      { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, content, "") }
     else
-      { :message, message }
+      { :message, content }
     end
+  end
+
+  defp send_webhooks(adapter, message) do
+    content = message_content(message)
+    hooks = Padawan.Cache.fetch!({adapter, "hook"}, fn(_) -> {:commit, %{}} end)
+    header = [{"Content-Type", "application/json"}]
+    Enum.each(hooks, fn {_chan, [pattern, url]} ->
+      if Regex.match?(pattern, content) do
+        Task.start( fn -> :hackney.post(url, header, Jason.encode!(data: message)) end)
+      end
+    end)
   end
 
 # }}}

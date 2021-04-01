@@ -10,7 +10,7 @@ defmodule Padawan.Application do
     children = [
       { Cachex, name: :padawan },
       Padawan.ChannelSup,
-      Padawan.MattermostWebsocket,
+      Padawan.Mattermost.Websocket,
       Padawan.Mattermost,
     ]
 
