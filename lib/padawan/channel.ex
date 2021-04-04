@@ -3,7 +3,7 @@ require Logger
 defmodule Padawan.Channel do
   use GenServer
 
-  alias Padawan.Lua
+  alias Padawan.{ Lua, Cache }
   alias Padawan.Channel.Handler
 
   @script_dir "lua"
@@ -13,6 +13,12 @@ defmodule Padawan.Channel do
       func: :handle_help,
       pattern: ~r/^help/i,
       synopsis: "help"
+    },
+    %Handler{
+      desc: "Enable/disable bot in channel",
+      func: :handle_enable,
+      pattern: ~r/^enable|disable/i,
+      synopsis: "enable|disable"
     },
     %Handler{
       desc: "Reload channel script",
@@ -139,9 +145,11 @@ defmodule Padawan.Channel do
       { :message, msg } ->
         Logger.debug inspect(message, pretty: true)
         send_webhooks(state.adapter, message)
-        state.message_handlers
-        |> Stream.filter(&Regex.match?(&1.pattern, msg))
-        |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
+        if Cache.get!({state.name, :enabled}) do
+          state.message_handlers
+          |> Stream.filter(&Regex.match?(&1.pattern, msg))
+          |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
+        end
       { :action, msg } ->
         Logger.debug inspect(message, pretty: true)
         state.action_handlers
@@ -227,7 +235,7 @@ defmodule Padawan.Channel do
 
   defp send_webhooks(adapter, message) do
     content = message_content(message)
-    hooks = Padawan.Cache.fetch!({adapter, "hook"}, fn(_) -> {:commit, %{}} end)
+    hooks = Cache.fetch!({adapter, :hook}, fn(_) -> {:commit, %{}} end)
     header = [{"Content-Type", "application/json"}]
     Enum.each(hooks, fn {_chan, [pattern, url]} ->
       if Regex.match?(pattern, content) do

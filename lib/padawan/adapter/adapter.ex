@@ -80,7 +80,7 @@ defmodule Padawan.Adapter do
       def handle_hook([""], lua) do
         channel = Lua.get(lua, :channel)
         name = channel.name
-        with { [ %{ ^name => [ pattern, url ] } ], _ } <- get_global(["hook"], lua) do
+        with { [ %{ ^name => [ pattern, url ] } ], _ } <- get_global([:hook], lua) do
            say([ "#{inspect pattern} -> #{url}" ], lua)
         else
           _ -> say([ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
@@ -89,8 +89,8 @@ defmodule Padawan.Adapter do
       def handle_hook(["reset"], lua) do
         channel = Lua.get(lua, :channel)
         name = channel.name
-        with { [ %{ ^name => _ }=hooks ], _ } <- get_global(["hook"], lua) do
-            set_global(["hook", Map.delete(hooks, name)], lua)
+        with { [ %{ ^name => _ }=hooks ], _ } <- get_global([:hook], lua) do
+            set_global([:hook, Map.delete(hooks, name)], lua)
             say([ "Webhook deleted." ], lua)
         else
           _ -> say([ "No webhook defined. Use 'hook <regex> <url>' to set it." ], lua )
@@ -104,9 +104,9 @@ defmodule Padawan.Adapter do
         do
           channel = Lua.get(lua, :channel)
           hook = %{ channel.name => [ pattern, url ] }
-          case get_global(["hook"], lua) do
-            { [ nil ], _ } ->       set_global(["hook", hook ], lua)
-            { [ %{}=hooks ], _ } -> set_global(["hook", Map.merge(hooks, hook)], lua)
+          case get_global([:hook], lua) do
+            { [ nil ], _ } ->       set_global([:hook, hook ], lua)
+            { [ %{}=hooks ], _ } -> set_global([:hook, Map.merge(hooks, hook)], lua)
           end
           say([ "Webhook saved: #{inspect pattern} -> #{url}" ], lua)
         else
@@ -141,6 +141,16 @@ defmodule Padawan.Adapter do
         script = Channel.script(channel)
         Channel.send_message(channel, :reload_script)
         say([ "#{script} loaded" ], lua)
+      end
+
+      def handle_enable([ "enable" <> _ ], lua) do
+        set([:enabled, true], lua)
+        say([ "Okay, ready to serve." ], lua )
+      end
+
+      def handle_enable([ "disable" <> _ ], lua) do
+        set([:enabled, false], lua)
+        say([ "Going to sleep. Wake me up when in need." ], lua )
       end
 
       defoverridable handle_help: 2
