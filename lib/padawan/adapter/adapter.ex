@@ -138,8 +138,8 @@ defmodule Padawan.Adapter do
 
       def handle_reload(_, lua) do
         channel = Lua.get(lua, :channel)
-        script = Channel.script(channel)
-        Channel.send_message(channel, :reload_script)
+        script = Channel.script(channel.name)
+        Channel.send_message(channel.name, :reload_script)
         say([ "#{script} loaded" ], lua)
       end
 
