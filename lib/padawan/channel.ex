@@ -90,20 +90,12 @@ defmodule Padawan.Channel do
   end
 
   def handle_continue({:reload_script, from}, state) do
-    try do
-      { res, lua } = Lua.load(state.lua_root, script(state.name))
-      if from do
-        GenServer.reply(from, res)
-      end
-      { :noreply, %{ state | lua: lua } }
-    rescue
-      _ ->
-        { res, lua } = Lua.load(state.lua_root, fallback_script())
-        if from do
-          GenServer.reply(from, res)
-        end
-        { :noreply, %{ state | lua: lua } }
+    s = script(state.name)
+    { res, lua } = Lua.load(state.lua_root, s )
+    if from do
+      GenServer.reply(from, res)
     end
+    { :noreply, %{ state | lua: lua, script: s } }
   end
 
   def handle_continue(:set_lua_actions, %{ action_handlers: actions } = state) do
@@ -183,7 +175,14 @@ defmodule Padawan.Channel do
   def registered_name(channel), do: :"#{__MODULE__}.#{String.upcase(channel)}"
   def process(channel), do: registered_name(channel)
 
-  def script(channel), do: "#{@script_dir}/#{channel}.lua"
+  def script(channel) do
+    s = "#{@script_dir}/#{channel}.lua"
+    if File.exists?(s) do
+      s
+    else
+      fallback_script()
+    end
+  end
   def fallback_script, do: "#{@script_dir}/default.lua"
   # }}}
   

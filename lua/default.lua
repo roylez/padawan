@@ -19,10 +19,9 @@
 --
 --      add_message_handler(REGEX, HANDLER_FUNC)
 --
-add_message_handler("how are you", "greet")
-add_message_handler("case\\s+(\\d)+", "handle_cases")
-add_message_handler("\\w+\\+\\+", "karma_incr")
-add_message_handler("\\w+\\-\\-", "karma_decr")
+-- add_message_handler("case\\s+(\\d)+", "handle_cases")
+-- add_message_handler("\\w+\\+\\+", "karma_incr")
+-- add_message_handler("\\w+\\-\\-", "karma_decr")
 
 -- Action handlers
 --
@@ -38,13 +37,8 @@ add_message_handler("\\w+\\-\\-", "karma_decr")
 --      reload - reload local channel script
 --      hook [<REGEX> <URL>|reset] - display/set webhook
 --
-add_action_handler("who are you", "self",       "who are you", "Some greetings")
-add_action_handler("ack",         "handle_ack", "ack [CASE]",  "Acknowledge a case")
-add_action_handler("top",         "karma_top",  "top",         "Karma top list")
-
-function greet(msg)
-  say("How do you do?")
-end
+-- add_action_handler("ack",         "handle_ack", "ack [CASE]",  "Acknowledge a case")
+-- add_action_handler("top",         "karma_top",  "top",         "Karma top list")
 
 function karma_incr(msg)
   local matches = gmatch(msg, "(\\w+)\\+\\+")
@@ -88,10 +82,6 @@ function karma_top(msg)
       say(k .. " has " .. karma[k] .. " points of karma.")
     end
   end
-end
-
-function self(msg)
-  say("I am a bot")
 end
 
 function handle_cases(msg)
