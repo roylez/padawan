@@ -53,6 +53,13 @@ defmodule Padawan.Channel do
   ]
 
 # OTP stuff {{{
+  def child_spec(args) do
+    %{
+      id: args.name,
+      start: {__MODULE__, :start_link, [args]}
+    }
+  end
+
   def start_link(channel) do
     GenServer.start_link(__MODULE__, channel, name: registered_name(channel.name), id: channel.name)
   end
