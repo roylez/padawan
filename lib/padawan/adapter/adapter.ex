@@ -71,7 +71,7 @@ defmodule Padawan.Adapter do
         say([ msg ], lua)
       end
 
-      def handle_hook([ "hook" <> rest ], lua) do
+      def handle_hook([ "webhook" <> rest ], lua) do
         case Lua.get(lua, :channel) do
           %{ private: true } -> handle_hook([String.trim(rest)], lua )
           _ -> say(["Ask me this in a private chat"], lua)

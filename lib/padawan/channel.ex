@@ -35,8 +35,8 @@ defmodule Padawan.Channel do
     %Handler{
       desc: "Display or setup webhook",
       func: :handle_hook,
-      pattern: ~r/^hook(\s+.*)?/,
-      synopsis: "hook [<REGEX> <URL>|reset]"
+      pattern: ~r/^webhook(\s+.*)?/,
+      synopsis: "webhook [<REGEX> <URL>|reset]"
     }
   ]
 

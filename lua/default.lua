@@ -35,7 +35,7 @@
 --      help - display available commands
 --      load [URL] - load a new lua channel script from a url
 --      reload - reload local channel script
---      hook [<REGEX> <URL>|reset] - display/set webhook
+--      webhook [<REGEX> <URL>|reset] - display/set webhook
 --
 -- add_action_handler("ack",         "handle_ack", "ack [CASE]",  "Acknowledge a case")
 -- add_action_handler("top",         "karma_top",  "top",         "Karma top list")
