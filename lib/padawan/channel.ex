@@ -66,7 +66,7 @@ defmodule Padawan.Channel do
 
   def init(%{ name: name }=channel) do
     Logger.metadata(channel: name)
-    Logger.notice "joining channel #{name}"
+    Logger.notice "Joining channel #{name}"
     ad = adapter(name)
     root = init_lua(ad)
            |> Lua.set(:channel, channel)
@@ -142,7 +142,7 @@ defmodule Padawan.Channel do
   def handle_cast(message, state) do
     case categorize_message(message, state.bot_name) do
       { :message, msg } ->
-        Logger.debug inspect(message, pretty: true)
+        Logger.debug inspect({:message, message}, pretty: true)
         send_webhooks(state.adapter, message)
         if Cache.get!({state.name, :enabled}) do
           state.message_handlers
@@ -150,7 +150,7 @@ defmodule Padawan.Channel do
           |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
         end
       { :action, msg } ->
-        Logger.debug inspect(message, pretty: true)
+        Logger.debug inspect({:action, message}, pretty: true)
         state.action_handlers
         |> Stream.filter(&Regex.match?(&1.pattern, msg))
         |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
@@ -241,8 +241,9 @@ defmodule Padawan.Channel do
 
   defp send_webhooks(adapter, message) do
     content = message_content(message)
-    hooks = Cache.fetch!({adapter, :hook}, fn(_) -> {:commit, %{}} end)
+    hooks = Cache.get!({adapter, :hook}) || %{}
     header = [{"Content-Type", "application/json"}]
+    IO.inspect message
     Enum.each(hooks, fn {_chan, [pattern, url]} ->
       if Regex.match?(pattern, content) do
         Task.start( fn -> :hackney.post(url, header, Jason.encode!(data: message)) end)
