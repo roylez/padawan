@@ -19,8 +19,23 @@ defmodule Padawan.Application do
     opts = [strategy: :one_for_one, name: Padawan]
     res = Supervisor.start_link(children, opts)
 
-    Padawan.start_channel(%{ name: "console", private: true })
+    _join_channels()
 
     res
+  end
+
+  defp _join_channels do
+    Padawan.start_channel(%{ name: "console", private: true })
+    Application.get_env(:padawan, :channels)
+    |> String.split()
+    |> Enum.map(fn c ->
+      case Padawan.Mattermost.channel(c) do
+        {:ok, 200, %{ type: "D" }} ->
+          Padawan.start_channel(%{ name: c, private: true })
+        {:ok, 200, _ } ->
+          Padawan.start_channel(%{ name: c, private: false })
+        _ -> nil
+      end
+    end)
   end
 end

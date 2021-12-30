@@ -243,10 +243,9 @@ defmodule Padawan.Channel do
     content = message_content(message)
     hooks = Cache.get!({adapter, :hook}) || %{}
     header = [{"Content-Type", "application/json"}]
-    IO.inspect message
     Enum.each(hooks, fn {_chan, [pattern, url]} ->
       if Regex.match?(pattern, content) do
-        Task.start( fn -> :hackney.post(url, header, Jason.encode!(data: message)) end)
+        Task.start( fn -> :hackney.post(url, header, Jason.encode!(message)) end)
       end
     end)
   end
