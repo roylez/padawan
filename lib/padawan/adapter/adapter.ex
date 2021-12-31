@@ -99,8 +99,7 @@ defmodule Padawan.Adapter do
       def handle_hook([hook], lua) do
         with [[ pattern, url ]] <- Regex.scan(~r/(.+)\s+(https?:\/\/(?:www\.)?(?:[0-9A-Za-z-\.@:%_\+~#=]+)+(?:(?:\.[a-zA-Z]{2,3})+)(?:\/.*)?(?:\?.*)?)/i, hook, capture: :all_but_first),
              [ pattern, url ] <- OptionParser.split(hook),
-             { :ok, pattern } <- Regex.compile(pattern),
-             { :ok, status, _, _ } when status in 200..209 <- :hackney.post(url)
+             { :ok, pattern } <- Regex.compile(pattern)
         do
           channel = Lua.get(lua, :channel)
           hook = %{ channel.name => [ pattern, url ] }

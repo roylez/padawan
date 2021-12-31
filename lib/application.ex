@@ -12,6 +12,7 @@ defmodule Padawan.Application do
       Padawan.ChannelSup,
       Padawan.Mattermost.Websocket,
       Padawan.Mattermost,
+      { Padawan.CacheSaver, Application.get_env(:padawan, :save_file) },
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

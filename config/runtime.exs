@@ -5,4 +5,6 @@ api_url: URI.merge(System.get_env("MATTERMOST_API_URL"), "/api/v4") |> URI.to_st
 token:   System.get_env("MATTERMOST_TOKEN")
 
 config :padawan,
-  channels: System.get_env("PADAWAN_CHANNELS")
+channels: System.get_env("PADAWAN_CHANNELS"),
+save_file: System.get_env("PADAWAN_SAVE_FILE", "/tmp/padavan_save")
+
