@@ -1,5 +1,6 @@
 defmodule Padawan.CacheSaver do
   use GenServer
+  require Logger
 
   alias Padawan.Cache
   
@@ -13,7 +14,9 @@ defmodule Padawan.CacheSaver do
 
   def handle_continue(:load, file) do
     case File.regular?(file) do
-      true -> Cache.load(file)
+      true ->
+        Logger.info "Loading saved state from #{file}"
+        Cache.load(file)
       false -> File.touch(file)
     end
     Process.send_after(self(), :dump, 30000)
