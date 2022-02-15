@@ -46,6 +46,7 @@ defmodule Padawan.MixProject do
   # copy to rel/overlays/
   defp copy_files(rel) do
     IO.puts "* copying extra files into release ..."
+    File.mkdir_p("rel/overlays")
     for file <- @overlay_files do
       IO.puts "* ........................ #{file}"
       File.cp_r!(file, "rel/overlays/" <> file)
