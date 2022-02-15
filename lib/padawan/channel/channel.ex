@@ -148,7 +148,7 @@ defmodule Padawan.Channel do
     case categorize_message(message, state.bot_name) do
       { :message, msg } ->
         Logger.debug inspect({:message, message}, pretty: true)
-        send_webhooks(state.adapter, message)
+        send_webhooks(state.adapter, msg)
         if Cache.get!({state.name, :enabled}) do
           state.message_handlers
           |> Enum.filter(&Regex.match?(&1.pattern, msg))
@@ -235,8 +235,8 @@ defmodule Padawan.Channel do
   defp categorize_message(%{ channel_type: "D" }=event, _) do
     { :action, message_content(event) }
   end
-  defp categorize_message(message, bot_name) do
-    content = message_content(message)
+  defp categorize_message(event, bot_name) do
+    content = message_content(event)
     if Regex.match?(~r/^@?#{bot_name}:?\s+/i, content) do
       { :action, Regex.replace(~r/^@?#{bot_name}:?\s+/, content, "") }
     else
@@ -244,13 +244,12 @@ defmodule Padawan.Channel do
     end
   end
 
-  defp send_webhooks(adapter, message) do
-    content = message_content(message)
+  defp send_webhooks(adapter, content) do
     hooks = Cache.get!({adapter, :hook}) || %{}
-    header = [{"Content-Type", "application/json"}]
+    header = [{"Content-Type", "text/plain"}]
     Enum.each(hooks, fn {_chan, [pattern, url]} ->
       if Regex.match?(pattern, content) do
-        Task.start( fn -> :hackney.post(url, header, Jason.encode!(message)) end)
+        Task.start( fn -> :hackney.post(url, header, content) end)
       end
     end)
   end
