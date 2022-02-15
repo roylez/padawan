@@ -57,7 +57,14 @@ defmodule Padawan.Mattermost.Websocket do
   end
 
   def handle_event(%{ event: e, seq: seq }, _state)
-  when e in ~w(emoji_added user_updated license_changed)
+  when e in ~w(
+    emoji_added
+    user_updated
+    license_changed
+    post_edited
+    reaction_added
+    reaction_removed
+  )
   do
     { :ok, seq }
   end
