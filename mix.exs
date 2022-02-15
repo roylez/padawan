@@ -24,7 +24,7 @@ defmodule Padawan.MixProject do
   defp releases do
     [
       padawan: [
-        steps: [:assemble, &copy_extra_files/1]
+        steps: [&copy_files/1, :assemble]
       ]
     ]
   end
@@ -41,13 +41,14 @@ defmodule Padawan.MixProject do
     ]
   end
 
-  @overlay_files ~w(lua/default.lua)
+  @overlay_files ~w(lua)
 
   # copy to rel/overlays/
-  defp copy_extra_files(rel) do
+  defp copy_files(rel) do
+    IO.puts "* copying extra files into release ..."
     for file <- @overlay_files do
-      IO.puts "* copying into release ... #{file}"
-      File.cp(file, "rel/overlays/" <> file)
+      IO.puts "* ........................ #{file}"
+      File.cp_r!(file, "rel/overlays/" <> file)
     end
     rel
   end
