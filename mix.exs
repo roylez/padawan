@@ -41,9 +41,14 @@ defmodule Padawan.MixProject do
     ]
   end
 
+  @overlay_files ~w(lua/default.lua)
+
   # copy to rel/overlays/
   defp copy_extra_files(rel) do
-    File.cp("lua/default.lua", "rel/overlays/lua/default.lua")
+    for file <- @overlay_files do
+      IO.puts "* copying into release ... #{file}"
+      File.cp(file, "rel/overlays/" <> file)
+    end
     rel
   end
 end
