@@ -17,4 +17,5 @@ defmodule Padawan.MapHttpResponse do
         { :error, status, Jason.decode!(body, keys: :atoms) }
     end
   end
+  defp decode(error), do: error
 end
