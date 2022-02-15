@@ -99,10 +99,15 @@ defmodule Padawan.Channel do
   def handle_continue({:reload_script, from}, state) do
     s = script(state.name)
     { res, lua } = Lua.load(state.lua_root, s )
+    Logger.info "Loaded script #{s}"
     if from do
       GenServer.reply(from, res)
     end
-    { :noreply, %{ state | lua: lua, script: s } }
+    {
+      :noreply,
+      %{ state | lua: lua, script: s },
+      {:continue, :set_lua_actions }
+    }
   end
 
   def handle_continue(:set_lua_actions, %{ action_handlers: actions } = state) do
@@ -204,7 +209,7 @@ defmodule Padawan.Channel do
 
   defp call_lua_function(lua, func, args) do
     try do
-      Logger.debug "[Lua] #{inspect {func, args}}"
+      Logger.info "[Lua] #{inspect {func, args}}"
       Lua.call(lua, func, args)
     rescue
       e in ErlangError ->
