@@ -25,6 +25,7 @@ defmodule Padawan.CacheSaver do
 
   def handle_info(:dump, file) do
     Cache.dump(file)
+    Process.send_after(self(), :dump, 30000)
     {:noreply, file}
   end
 
