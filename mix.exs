@@ -8,7 +8,8 @@ defmodule Padawan.MixProject do
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      xref: [exclude: Luerl]
+      xref: [exclude: Luerl],
+      releases: releases(),
     ]
   end
 
@@ -17,6 +18,14 @@ defmodule Padawan.MixProject do
     [
       extra_applications: [:logger],
       mod: {Padawan.Application, []}
+    ]
+  end
+
+  defp releases do
+    [
+      padawan: [
+        steps: [:assemble, &copy_extra_files/1]
+      ]
     ]
   end
 
@@ -30,5 +39,11 @@ defmodule Padawan.MixProject do
       {:websockex, "~> 0.4"},
       {:luerl, git: "https://github.com/rvirding/luerl", branch: "develop"},
     ]
+  end
+
+  # copy to rel/overlays/
+  defp copy_extra_files(rel) do
+    File.cp("lua/default.lua", "rel/overlays/lua/default.lua")
+    rel
   end
 end

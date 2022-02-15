@@ -25,7 +25,7 @@ FROM alpine:${ALPINE}
 ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8
 
 RUN apk update --no-cache && \
-    apk add --no-cache bash ncurses-libs libstdc++ ca-certificates
+    apk add --no-cache bash ncurses-libs libstdc++ ca-certificates lua
 
 WORKDIR /app
 
@@ -33,6 +33,5 @@ RUN addgroup -S app && adduser -S app -G app -h /app
 USER app
 
 COPY --chown=app:app --from=builder /app/_build/prod/rel/padawan .
-ADD lua ./lua
 
 CMD ["./bin/padawan", "start" ]

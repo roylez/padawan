@@ -146,13 +146,13 @@ defmodule Padawan.Channel do
         send_webhooks(state.adapter, message)
         if Cache.get!({state.name, :enabled}) do
           state.message_handlers
-          |> Stream.filter(&Regex.match?(&1.pattern, msg))
+          |> Enum.filter(&Regex.match?(&1.pattern, msg))
           |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
         end
       { :action, msg } ->
-        Logger.debug inspect({:action, message}, pretty: true)
+        Logger.info inspect({:action, message}, pretty: true)
         state.action_handlers
-        |> Stream.filter(&Regex.match?(&1.pattern, msg))
+        |> Enum.filter(&Regex.match?(&1.pattern, msg))
         |> Enum.map(&call_lua_function(state.lua, &1.func, [msg]))
       _ ->
         nil
